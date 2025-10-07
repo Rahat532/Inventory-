@@ -1,0 +1,20 @@
+END USER LICENSE AGREEMENT (EULA)
+
+IMPORTANT: Please read this End User License Agreement carefully before installing or using the Inventory Management System software.
+
+1. License
+This software is licensed, not sold. You are granted a non-exclusive, non-transferable license to install and use one copy of the software on a single device for business or personal purposes.
+
+2. Restrictions
+You may not reverse engineer, decompile, or disassemble the software. You may not lease, rent, or sublicense the software.
+
+3. Data & Backups
+You are responsible for backing up your data. The software provides backup and restore features; use them regularly.
+
+4. Disclaimer
+The software is provided “AS IS” without warranty of any kind. In no event shall the authors be liable for any damages arising from the use of the software.
+
+5. Termination
+This license is effective until terminated. It will terminate automatically if you fail to comply with any term of this EULA.
+
+By installing or using the software, you agree to be bound by the terms of this EULA.

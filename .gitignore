@@ -1,0 +1,75 @@
+# OS-specific
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Node / Frontend
+frontend/node_modules/
+frontend/build/
+frontend/dist/
+frontend/.cache/
+frontend/.parcel-cache/
+frontend/.vite/
+frontend/coverage/
+**/npm-debug.log*
+**/yarn-debug.log*
+**/yarn-error.log*
+**/pnpm-debug.log*
+
+# Electron builder outputs
+frontend/dist/*
+!frontend/dist/.gitkeep
+
+# Backend Python
+backend/venv/
+.venv/
+.env
+.env.*
+backend/__pycache__/
+backend/.pytest_cache/
+backend/.mypy_cache/
+backend/.ruff_cache/
+backend/build/
+backend/dist/
+backend/*.spec
+
+# SQLite databases and backups
+*.sqlite
+*.sqlite3
+*.db
+!database/README.md
+# Keep the folder but ignore generated DBs/backups
+/database/*.db
+/database/backups/
+
+# Uploads (keep folder, ignore files)
+/uploads/*
+!uploads/.gitkeep
+
+# Logs and temp
+logs/
+*.log
+*.tmp
+*.temp
+*.swp
+
+# IDE/editor
+.vscode/
+.idea/
+*.iml
+
+# Misc caches
+**/.cache/
+**/.tsbuildinfo
+
+# Build artifacts
+*.exe
+*.dll
+*.pdb
+
+# Test artifacts
+coverage/
+pytest.cache/
+
+# Generated config from electron-builder
+frontend/dist/builder-effective-config.yaml
