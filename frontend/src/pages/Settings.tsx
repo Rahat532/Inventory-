@@ -44,6 +44,7 @@ const currencySymbolMap: Record<string, string> = {
   CAD: '$',
   AUD: '$',
   INR: '₹',
+  BDT: 'Tk',
 };
 
 const Settings: React.FC = () => {
@@ -302,6 +303,7 @@ const Settings: React.FC = () => {
                         <SelectItem value="CAD">CAD - Canadian Dollar</SelectItem>
                         <SelectItem value="AUD">AUD - Australian Dollar</SelectItem>
                         <SelectItem value="INR">INR - Indian Rupee</SelectItem>
+                        <SelectItem value="BDT">BDT - Bangladeshi Taka (Tk)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

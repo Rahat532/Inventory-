@@ -14,7 +14,7 @@ import {
   ArcElement
 } from 'chart.js';
 import { Bar, Line, Doughnut } from 'react-chartjs-2';
-import { dashboardApi } from '../services/api';
+import { dashboardApi, settingsApi } from '../services/api';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import {
@@ -93,6 +93,14 @@ const Dashboard: React.FC = () => {
     refetchInterval: 30000,
   });
 
+  // Load currency symbol from settings
+  const { data: settingsDict } = useQuery({
+    queryKey: ['settings', 'dict', 'currency_symbol'],
+    queryFn: async () => (await settingsApi.getDict()).data as Record<string, string>,
+    staleTime: 60_000,
+  });
+  const currencySymbol = (settingsDict?.currency_symbol as string) || '$';
+
   // Process chart data
   const salesChartDisplay = {
     labels: salesChartData?.map((item: any) => {
@@ -107,7 +115,7 @@ const Dashboard: React.FC = () => {
     }) || [],
     datasets: [
       {
-        label: 'Sales ($)',
+        label: `Sales (${currencySymbol})`,
         data: salesChartData?.map((item: any) => item.sales) || [],
         backgroundColor: 'rgba(59, 130, 246, 0.5)',
         borderColor: 'rgb(59, 130, 246)',
@@ -242,7 +250,7 @@ const Dashboard: React.FC = () => {
             <DollarSign className="h-4 w-4" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${kpis?.total_sales_today?.toFixed(2) || '0.00'}</div>
+            <div className="text-2xl font-bold">{currencySymbol} {kpis?.total_sales_today?.toFixed(2) || '0.00'}</div>
             <p className="text-xs opacity-80">{kpis?.total_sales_count_today || 0} transactions</p>
           </CardContent>
         </Card>
@@ -253,7 +261,7 @@ const Dashboard: React.FC = () => {
             <TrendingUp className="h-4 w-4" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${kpis?.total_revenue_this_month?.toFixed(2) || '0.00'}</div>
+            <div className="text-2xl font-bold">{currencySymbol} {kpis?.total_revenue_this_month?.toFixed(2) || '0.00'}</div>
             <p className="text-xs opacity-80">This month's total</p>
           </CardContent>
         </Card>
@@ -369,7 +377,7 @@ const Dashboard: React.FC = () => {
                     </div>
                     <div className="text-right">
                       <div className="font-bold text-green-600">
-                        ${sale.final_amount.toFixed(2)}
+                        {currencySymbol} {sale.final_amount.toFixed(2)}
                       </div>
                     </div>
                   </div>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { salesApi, productApi } from '../services/api';
+import { salesApi, productApi, settingsApi } from '../services/api';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -115,6 +115,14 @@ const Sales: React.FC = () => {
     },
     enabled: isNewSaleDialogOpen,
   });
+
+  // Load currency symbol from settings
+  const { data: settingsDict } = useQuery({
+    queryKey: ['settings', 'dict', 'currency_symbol'],
+    queryFn: async () => (await settingsApi.getDict()).data as Record<string, string>,
+    staleTime: 60_000,
+  });
+  const currencySymbol = (settingsDict?.currency_symbol as string) || '$';
 
   // Create sale mutation
   const createSaleMutation = useMutation({
@@ -287,7 +295,7 @@ const Sales: React.FC = () => {
                               SKU: {product.sku} | Stock: {product.stock_quantity} {product.unit}
                             </div>
                             <div className="text-sm font-medium text-green-600">
-                              ${product.price.toFixed(2)}
+                              {currencySymbol} {product.price.toFixed(2)}
                             </div>
                           </div>
                           <Button
@@ -326,7 +334,7 @@ const Sales: React.FC = () => {
                             <div className="flex-1">
                               <div className="font-medium">{item.product.name}</div>
                               <div className="text-sm text-muted-foreground">
-                                ${item.product.price.toFixed(2)} each
+                                {currencySymbol} {item.product.price.toFixed(2)} each
                               </div>
                             </div>
                             <div className="flex items-center space-x-2">
@@ -355,14 +363,14 @@ const Sales: React.FC = () => {
                             </div>
                           </div>
                           <div className="text-right font-medium mt-2">
-                            ${item.subtotal.toFixed(2)}
+                            {currencySymbol} {item.subtotal.toFixed(2)}
                           </div>
                         </div>
                       ))}
                       <div className="p-3 bg-gray-50">
                         <div className="flex justify-between items-center text-lg font-bold">
                           <span>Total:</span>
-                          <span>${getCartTotal().toFixed(2)}</span>
+                          <span>{currencySymbol} {getCartTotal().toFixed(2)}</span>
                         </div>
                       </div>
                     </div>
@@ -411,7 +419,7 @@ const Sales: React.FC = () => {
                         Cancel
                       </Button>
                       <Button type="submit" disabled={createSaleMutation.isPending}>
-                        {createSaleMutation.isPending ? 'Processing...' : `Complete Sale ($${getCartTotal().toFixed(2)})`}
+                        {createSaleMutation.isPending ? 'Processing...' : `Complete Sale (${currencySymbol} ${getCartTotal().toFixed(2)})`}
                       </Button>
                     </DialogFooter>
                   </form>
@@ -505,7 +513,7 @@ const Sales: React.FC = () => {
                         <span className="capitalize">{sale.payment_method.replace('_', ' ')}</span>
                       </TableCell>
                       <TableCell className="font-medium">
-                        ${Number((sale.final_amount ?? sale.total_amount) || 0).toFixed(2)}
+                        {currencySymbol} {Number((sale.final_amount ?? sale.total_amount) || 0).toFixed(2)}
                       </TableCell>
                       <TableCell>
                         <Button
@@ -590,8 +598,8 @@ const Sales: React.FC = () => {
                         <TableRow key={item.id}>
                           <TableCell>{item.product?.name || item.product_id}</TableCell>
                           <TableCell>{item.quantity}</TableCell>
-                          <TableCell>${Number(item.unit_price).toFixed(2)}</TableCell>
-                          <TableCell>${Number(item.total_price).toFixed(2)}</TableCell>
+                          <TableCell>{currencySymbol} {Number(item.unit_price).toFixed(2)}</TableCell>
+                          <TableCell>{currencySymbol} {Number(item.total_price).toFixed(2)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -599,7 +607,7 @@ const Sales: React.FC = () => {
                   <div className="p-3 border-t bg-gray-50">
                     <div className="flex justify-between items-center text-lg font-bold">
                       <span>Total:</span>
-                      <span>${Number((selectedSale.final_amount ?? selectedSale.total_amount) || 0).toFixed(2)}</span>
+                      <span>{currencySymbol} {Number((selectedSale.final_amount ?? selectedSale.total_amount) || 0).toFixed(2)}</span>
                     </div>
                   </div>
                 </div>

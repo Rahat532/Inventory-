@@ -16,8 +16,8 @@ router = APIRouter()
 # Default settings
 DEFAULT_SETTINGS = {
     "theme": "light",
-    "currency": "USD",
-    "currency_symbol": "$",
+    "currency": "BDT",
+    "currency_symbol": "Tk",
     "company_name": "My Company",
     "company_address": "",
     "company_phone": "",

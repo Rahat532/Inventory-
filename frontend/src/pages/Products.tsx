@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { productApi, categoryApi, uploadApi, API_BASE_URL } from '../services/api';
+import { productApi, categoryApi, uploadApi, API_BASE_URL, settingsApi } from '../services/api';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -92,6 +92,14 @@ const Products: React.FC = () => {
       return response.data;
     },
   });
+
+  // Load currency symbol from settings
+  const { data: settingsDict } = useQuery({
+    queryKey: ['settings', 'dict', 'currency_symbol'],
+    queryFn: async () => (await settingsApi.getDict()).data as Record<string, string>,
+    staleTime: 60_000,
+  });
+  const currencySymbol = (settingsDict?.currency_symbol as string) || '$';
 
   // Create product mutation
   const createProductMutation = useMutation({
@@ -287,11 +295,11 @@ const Products: React.FC = () => {
 
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <Label htmlFor="price">Price ($)</Label>
+                  <Label htmlFor="price">Price ({currencySymbol})</Label>
                   <Input id="price" name="price" type="number" step="0.01" required />
                 </div>
                 <div>
-                  <Label htmlFor="cost">Cost ($)</Label>
+                  <Label htmlFor="cost">Cost ({currencySymbol})</Label>
                   <Input id="cost" name="cost" type="number" step="0.01" required />
                 </div>
                 <div>
@@ -449,7 +457,7 @@ const Products: React.FC = () => {
                       </div>
                     </TableCell>
                     <TableCell>{product.category.name}</TableCell>
-                    <TableCell>${product.price.toFixed(2)}</TableCell>
+                    <TableCell>{currencySymbol} {product.price.toFixed(2)}</TableCell>
                     <TableCell>
                       <div className={`font-medium ${isLowStock(product) ? 'text-red-600' : ''}`}>
                         {product.stock_quantity} {product.unit}
@@ -560,11 +568,11 @@ const Products: React.FC = () => {
 
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <Label htmlFor="edit-price">Price ($)</Label>
+                  <Label htmlFor="edit-price">Price ({currencySymbol})</Label>
                   <Input id="edit-price" name="price" type="number" step="0.01" defaultValue={selectedProduct.price} required />
                 </div>
                 <div>
-                  <Label htmlFor="edit-cost">Cost ($)</Label>
+                  <Label htmlFor="edit-cost">Cost ({currencySymbol})</Label>
                   <Input id="edit-cost" name="cost" type="number" step="0.01" defaultValue={selectedProduct.cost} required />
                 </div>
                 <div>

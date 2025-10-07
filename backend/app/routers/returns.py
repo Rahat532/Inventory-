@@ -81,8 +81,8 @@ def _build_return_invoice_pdf(db: Session, ret: Return) -> bytes:
 
         c.drawString(20 * mm, y, (name + sku)[:70])
         c.drawRightString(140 * mm, y, str(qty))
-        c.drawRightString(165 * mm, y, f"{currency_symbol}{unit_price:,.2f}")
-        c.drawRightString(width - 20 * mm, y, f"{currency_symbol}{subtotal:,.2f}")
+        c.drawRightString(165 * mm, y, f"{currency_symbol} {unit_price:,.2f}")
+        c.drawRightString(width - 20 * mm, y, f"{currency_symbol} {subtotal:,.2f}")
         y -= 7 * mm
         if y < 30 * mm:
             c.showPage()
@@ -94,7 +94,7 @@ def _build_return_invoice_pdf(db: Session, ret: Return) -> bytes:
     y -= 8 * mm
     c.setFont("Helvetica-Bold", 11)
     c.drawRightString(165 * mm, y, "Refund:")
-    c.drawRightString(width - 20 * mm, y, f"{currency_symbol}{float(ret.total_amount or 0):,.2f}")
+    c.drawRightString(width - 20 * mm, y, f"{currency_symbol} {float(ret.total_amount or 0):,.2f}")
 
     # Footer
     c.setFont("Helvetica", 9)

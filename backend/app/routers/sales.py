@@ -82,8 +82,8 @@ def _build_sale_invoice_pdf(db: Session, sale: Sale) -> bytes:
 
         c.drawString(20 * mm, y, (name + sku)[:70])
         c.drawRightString(140 * mm, y, str(qty))
-        c.drawRightString(165 * mm, y, f"{currency_symbol}{unit_price:,.2f}")
-        c.drawRightString(width - 20 * mm, y, f"{currency_symbol}{subtotal:,.2f}")
+        c.drawRightString(165 * mm, y, f"{currency_symbol} {unit_price:,.2f}")
+        c.drawRightString(width - 20 * mm, y, f"{currency_symbol} {subtotal:,.2f}")
         y -= 7 * mm
         if y < 30 * mm:  # new page if needed
             c.showPage()
@@ -102,17 +102,17 @@ def _build_sale_invoice_pdf(db: Session, sale: Sale) -> bytes:
     y -= 8 * mm
     c.setFont("Helvetica", 10)
     c.drawRightString(165 * mm, y, "Total:")
-    c.drawRightString(width - 20 * mm, y, f"{currency_symbol}{float(sale.total_amount or 0):,.2f}")
+    c.drawRightString(width - 20 * mm, y, f"{currency_symbol} {float(sale.total_amount or 0):,.2f}")
     y -= 6 * mm
     c.drawRightString(165 * mm, y, "Discount:")
-    c.drawRightString(width - 20 * mm, y, f"{currency_symbol}{float(sale.discount or 0):,.2f}")
+    c.drawRightString(width - 20 * mm, y, f"{currency_symbol} {float(sale.discount or 0):,.2f}")
     y -= 6 * mm
     c.drawRightString(165 * mm, y, "Tax:")
-    c.drawRightString(width - 20 * mm, y, f"{currency_symbol}{float(sale.tax or 0):,.2f}")
+    c.drawRightString(width - 20 * mm, y, f"{currency_symbol} {float(sale.tax or 0):,.2f}")
     y -= 8 * mm
     c.setFont("Helvetica-Bold", 11)
     c.drawRightString(165 * mm, y, "Amount Due:")
-    c.drawRightString(width - 20 * mm, y, f"{currency_symbol}{float(sale.final_amount or sale.total_amount or 0):,.2f}")
+    c.drawRightString(width - 20 * mm, y, f"{currency_symbol} {float(sale.final_amount or sale.total_amount or 0):,.2f}")
 
     # Footer
     c.setFont("Helvetica", 9)

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { returnsApi, salesApi } from '../services/api';
+import { returnsApi, salesApi, settingsApi } from '../services/api';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -88,6 +88,14 @@ const Returns: React.FC = () => {
     },
     enabled: isCreateDialogOpen,
   });
+
+  // Load currency symbol from settings
+  const { data: settingsDict } = useQuery({
+    queryKey: ['settings', 'dict', 'currency_symbol'],
+    queryFn: async () => (await settingsApi.getDict()).data as Record<string, string>,
+    staleTime: 60_000,
+  });
+  const currencySymbol = (settingsDict?.currency_symbol as string) || '$';
 
   // Get selected sale details
   const selectedSale = sales.find(sale => sale.id.toString() === selectedSaleId);
@@ -254,7 +262,7 @@ const Returns: React.FC = () => {
                     <SelectContent>
                       {sales.map((sale) => (
                         <SelectItem key={sale.id} value={sale.id.toString()}>
-                          {sale.sale_number} - ${sale.final_amount.toFixed(2)} 
+                          {sale.sale_number} - {currencySymbol} {sale.final_amount.toFixed(2)} 
                           ({new Date(sale.created_at).toLocaleDateString()})
                         </SelectItem>
                       ))}
@@ -307,8 +315,8 @@ const Returns: React.FC = () => {
                           <TableRow key={item.product.id}>
                             <TableCell>{item.product.name}</TableCell>
                             <TableCell>{item.quantity}</TableCell>
-                            <TableCell>${item.unit_price.toFixed(2)}</TableCell>
-                            <TableCell>${item.total_price.toFixed(2)}</TableCell>
+                            <TableCell>{currencySymbol} {item.unit_price.toFixed(2)}</TableCell>
+                            <TableCell>{currencySymbol} {item.total_price.toFixed(2)}</TableCell>
                             <TableCell>
                               <Button
                                 size="sm"
@@ -473,7 +481,7 @@ const Returns: React.FC = () => {
               <DollarSign className="h-8 w-8 text-green-500" />
               <div className="ml-4">
                 <p className="text-2xl font-bold">
-                  ${returns.filter(r => r.status === 'refunded')
+                  {currencySymbol} {returns.filter(r => r.status === 'refunded')
                     .reduce((sum, r) => sum + (r.total_amount || 0), 0).toFixed(2)}
                 </p>
                 <p className="text-sm text-muted-foreground">Total Refunded</p>
@@ -540,7 +548,7 @@ const Returns: React.FC = () => {
                       <TableCell>
                         {returnItem.refund_method.replace('_', ' ').toUpperCase()}
                       </TableCell>
-                      <TableCell>${(returnItem.total_amount || 0).toFixed(2)}</TableCell>
+                      <TableCell>{currencySymbol} {(returnItem.total_amount || 0).toFixed(2)}</TableCell>
                       <TableCell>
                         {new Date(returnItem.created_at).toLocaleDateString()}
                       </TableCell>
