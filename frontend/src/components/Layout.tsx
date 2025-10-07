@@ -1,25 +1,29 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Package, 
-  FolderOpen, 
-  ShoppingCart, 
-  FileText, 
+import {
+  LayoutDashboard,
+  Package,
+  FolderOpen,
+  ShoppingCart,
+  FileText,
   Settings,
   Menu,
   X,
-  RotateCcw
+  RotateCcw,
+  Moon,
+  Sun,
+  Monitor,
 } from 'lucide-react';
 import { Button } from './ui/button';
+import { useTheme } from '../lib/theme';
 
 interface LayoutProps {
   children: React.ReactNode;
 }
-
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
+  const { theme, setTheme } = useTheme();
 
   const navigation = [
     { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -99,6 +103,35 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
                 {navigation.find(item => item.href === location.pathname)?.name || 'Dashboard'}
               </h2>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                title="Light theme"
+                aria-pressed={theme === 'light'}
+                onClick={() => setTheme('light')}
+              >
+                <Sun className="h-5 w-5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                title="Dark theme"
+                aria-pressed={theme === 'dark'}
+                onClick={() => setTheme('dark')}
+              >
+                <Moon className="h-5 w-5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                title="Auto (system)"
+                aria-pressed={theme === 'auto'}
+                onClick={() => setTheme('auto')}
+              >
+                <Monitor className="h-5 w-5" />
+              </Button>
             </div>
           </div>
         </div>

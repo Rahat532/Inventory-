@@ -31,6 +31,16 @@ def get_dashboard_kpis(db: Session = Depends(get_db)):
         Sale.created_at >= today_start,
         Sale.created_at <= today_end
     ).first()
+
+    # Today's refunded returns (subtract from revenue when payment is actually made)
+    today_refunds = db.query(
+        func.coalesce(func.sum(Return.total_amount), 0)
+    ).filter(
+        Return.status == 'refunded',
+        Return.processed_at.isnot(None),  # only processed refunds
+        Return.processed_at >= today_start,
+        Return.processed_at <= today_end,
+    ).scalar() or 0
     
     # Low stock count
     low_stock_count = db.query(Product).filter(
@@ -42,15 +52,27 @@ def get_dashboard_kpis(db: Session = Depends(get_db)):
     first_day_of_month = today.replace(day=1)
     month_start = datetime.combine(first_day_of_month, datetime.min.time())
     
-    monthly_revenue = db.query(
+    monthly_sales = db.query(
         func.coalesce(func.sum(Sale.final_amount), 0)
     ).filter(
         Sale.created_at >= month_start
     ).scalar() or 0
+
+    monthly_refunds = db.query(
+        func.coalesce(func.sum(Return.total_amount), 0)
+    ).filter(
+        Return.status == 'refunded',
+        Return.processed_at.isnot(None),
+        Return.processed_at >= month_start
+    ).scalar() or 0
+
+    # Net values
+    total_sales_today_net = float(today_sales.total) - float(today_refunds)
+    monthly_revenue = float(monthly_sales) - float(monthly_refunds)
     
     return DashboardKPIs(
         total_products=total_products,
-        total_sales_today=float(today_sales.total),
+        total_sales_today=max(total_sales_today_net, 0.0),
         total_sales_count_today=today_sales.count,
         low_stock_count=low_stock_count,
         total_revenue_this_month=float(monthly_revenue)

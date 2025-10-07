@@ -54,10 +54,21 @@ const Dashboard: React.FC = () => {
   const [chartPeriod, setChartPeriod] = useState('7');
   
   // Fetch dashboard data
-  const { data: kpis, isLoading: kpisLoading, refetch: refetchKpis } = useQuery({
+  const { data: kpis, isLoading: kpisLoading, error: kpisError, refetch: refetchKpis } = useQuery({
     queryKey: ['dashboard', 'kpis'],
-    queryFn: () => dashboardApi.getKPIs().then(res => res.data),
+    queryFn: async () => {
+      try {
+        const res = await dashboardApi.getKPIs();
+        console.log('[Dashboard] KPIs loaded:', res.data);
+        return res.data;
+      } catch (err: any) {
+        console.error('[Dashboard] Failed to load KPIs:', err);
+        console.error('[Dashboard] Error details:', err.response?.data || err.message);
+        throw err;
+      }
+    },
     refetchInterval: 30000, // Refresh every 30 seconds
+    retry: 2,
   });
 
   const { data: lowStockProducts, refetch: refetchLowStock } = useQuery({
@@ -217,8 +228,25 @@ const Dashboard: React.FC = () => {
     );
   }
 
+  if (kpisError) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="text-lg text-red-600 mb-2">Failed to load dashboard</div>
+          <div className="text-sm text-muted-foreground mb-4">
+            {(kpisError as any)?.message || 'Network error'}
+          </div>
+          <Button onClick={() => refetchKpis()}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6 h-screen overflow-y-auto">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>

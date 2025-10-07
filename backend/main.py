@@ -64,7 +64,7 @@ if __name__ == "__main__":
     # Use UVICORN_RELOAD=1 to enable reload explicitly when running the file directly.
     reload_flag = os.getenv("UVICORN_RELOAD") == "1" and not getattr(sys, "frozen", False)
     uvicorn.run(
-        "main:app",
+        app,
         host="127.0.0.1",
         port=8000,
         reload=reload_flag,

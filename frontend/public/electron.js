@@ -1,18 +1,33 @@
-const { app, BrowserWindow, Menu, ipcMain } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, dialog } = require('electron');
 const path = require('path');
 // Use Electron's built-in flag instead of electron-is-dev so prod builds don't require that package
 const isDev = !app.isPackaged;
 const { spawn } = require('child_process');
 const net = require('net');
+const fs = require('fs');
+const http = require('http');
 
 let mainWindow;
 let splashWindow;
 let backendProcess;
 
+// Simple logger to userData
+function logLine(...args) {
+  try {
+    const p = app.getPath('userData') ? path.join(app.getPath('userData'), 'ims-log.txt') : null;
+    const line = `[${new Date().toISOString()}] ${args.map(a => (typeof a === 'string' ? a : JSON.stringify(a))).join(' ')}\n`;
+    if (p) fs.appendFileSync(p, line, { encoding: 'utf8' });
+  } catch {}
+}
+
 // Reduce crashes on some GPUs (observed GPU process exit); prefer stability for prod
 app.disableHardwareAcceleration();
 
 function createWindow() {
+  if (mainWindow) {
+    try { mainWindow.focus(); } catch {}
+    return;
+  }
   // Create the browser window
   const iconPath = path.join(__dirname, 'assets/icon.png');
   const hasIcon = require('fs').existsSync(iconPath);
@@ -40,13 +55,13 @@ function createWindow() {
 
   const loadProd = () => {
     usingDevServer = false;
-    console.log('Loading PRODUCTION build at file:', prodIndexPath);
+    logLine('Loading PRODUCTION build at file:', prodIndexPath);
     // Use loadFile so CRA "homepage": "./" assets resolve properly under file://
     mainWindow.loadFile(prodIndexPath);
   };
 
   const loadDev = () => {
-    console.log('Loading DEV server at:', devUrl);
+    logLine('Loading DEV server at:', devUrl);
     mainWindow.loadURL(devUrl);
     // If dev server fails to load, fallback to prod build automatically
   };
@@ -61,7 +76,7 @@ function createWindow() {
   // Fallback when load fails (e.g., dev server not running)
   mainWindow.webContents.on('did-fail-load', (_e, errorCode, errorDescription) => {
     if (usingDevServer) {
-      console.warn('Dev server failed to load:', errorCode, errorDescription, '– Falling back to production build.');
+      logLine('Dev server failed to load:', errorCode, errorDescription, '– Falling back to production build.');
       loadProd();
     }
   });
@@ -283,48 +298,116 @@ async function isPortOpen(port, host = '127.0.0.1', timeoutMs = 400) {
   }
 }
 
+function checkIMSHealth(baseUrl = 'http://127.0.0.1:8000', timeoutMs = 1000) {
+  return new Promise((resolve) => {
+    const req = http.get(`${baseUrl}/health`, { timeout: timeoutMs }, (res) => {
+      let body = '';
+      res.on('data', (c) => body += c);
+      res.on('end', () => {
+        try {
+          const json = JSON.parse(body || '{}');
+          resolve(json && json.status === 'healthy');
+        } catch {
+          resolve(false);
+        }
+      });
+    });
+    req.on('timeout', () => { try { req.destroy(); } catch {} resolve(false); });
+    req.on('error', () => resolve(false));
+  });
+}
+
+function resolvePythonCmd(devBackendPath) {
+  // Prefer venv python on Windows in dev
+  try {
+    if (process.platform === 'win32' && devBackendPath) {
+      const venvPy = path.join(devBackendPath, 'venv', 'Scripts', 'python.exe');
+      if (require('fs').existsSync(venvPy)) return venvPy;
+    }
+  } catch {}
+  // Fallbacks
+  return process.platform === 'win32' ? 'python' : 'python3';
+}
+
 async function startBackend(force = false) {
   // If something is already listening on 8000, don't start another backend
   const alreadyRunning = await isPortOpen(8000, '127.0.0.1', 350);
   if (alreadyRunning) {
-    console.log('Backend already running on http://127.0.0.1:8000, skipping spawn.');
-    return;
+    const healthy = await checkIMSHealth('http://127.0.0.1:8000', 1200);
+    if (healthy) {
+      console.log('[Backend] Already healthy on http://127.0.0.1:8000, skipping spawn.');
+      return;
+    } else {
+      console.log('[Backend] Port 8000 is occupied by another service that is not IMS.');
+      try {
+        dialog.showErrorBox('Port In Use', 'Another application is using port 8000. Please close it and restart the app.');
+      } catch {}
+      return; // Without a dynamic port handoff to renderer, safest is to stop here.
+    }
   }
   if (!isDev) {
     // In production, start the bundled Python backend
     const exeName = process.platform === 'win32' ? 'ims-backend.exe' : 'ims-backend';
     const backendExe = path.join(process.resourcesPath, 'backend', 'dist', exeName);
     
+    console.log('[Backend] Looking for exe at:', backendExe);
+    console.log('[Backend] process.resourcesPath:', process.resourcesPath);
+    console.log('[Backend] Exe exists?', require('fs').existsSync(backendExe));
+    
     // Check if bundled backend exists
     if (require('fs').existsSync(backendExe)) {
-      console.log('Starting bundled backend:', backendExe);
-      const dataDir = app.getPath('userData') ? require('path').join(app.getPath('userData'), 'ims-data') : undefined;
+      console.log('[Backend] Starting bundled exe:', backendExe);
+      const dataDir = app.getPath('userData') ? path.join(app.getPath('userData'), 'ims-data') : undefined;
       const env = Object.assign({}, process.env, dataDir ? { IMS_DATA_DIR: dataDir } : {});
+      
+      // Capture backend output instead of inheriting stdio
       backendProcess = spawn(backendExe, [], {
-        stdio: 'inherit',
+        stdio: ['ignore', 'pipe', 'pipe'],
+        windowsHide: true,
+        env,
+        detached: false
+      });
+      
+      backendProcess.stdout.on('data', (data) => {
+        console.log('[Backend stdout]:', data.toString());
+      });
+      
+      backendProcess.stderr.on('data', (data) => {
+        console.error('[Backend stderr]:', data.toString());
+      });
+      
+      backendProcess.on('exit', (code) => {
+        console.log('[Backend] Process exited with code:', code);
+      });
+    } else {
+      // Fallback to Python script (shouldn't happen in prod)
+      const backendPath = path.join(process.resourcesPath, 'backend');
+      console.log('[Backend] Exe not found, trying Python from:', backendPath);
+      const dataDir = app.getPath('userData') ? path.join(app.getPath('userData'), 'ims-data') : undefined;
+      const env = Object.assign({}, process.env, dataDir ? { IMS_DATA_DIR: dataDir } : {});
+      
+      backendProcess = spawn('python', ['-m', 'uvicorn', 'main:app', '--host', '127.0.0.1', '--port', '8000'], {
+        cwd: backendPath,
+        stdio: ['ignore', 'pipe', 'pipe'],
         windowsHide: true,
         env
       });
-    } else {
-      // Fallback to Python script
-      const backendPath = path.join(process.resourcesPath, 'backend');
-      console.log('Starting Python backend from:', backendPath);
-      const dataDir = app.getPath('userData') ? require('path').join(app.getPath('userData'), 'ims-data') : undefined;
-      const env = Object.assign({}, process.env, dataDir ? { IMS_DATA_DIR: dataDir } : {});
-      backendProcess = spawn('python', ['-m', 'uvicorn', 'main:app', '--host', '127.0.0.1', '--port', '8000'], {
-        cwd: backendPath,
-        stdio: 'inherit',
-        windowsHide: true,
-        env
+      
+      backendProcess.stdout.on('data', (data) => {
+        console.log('[Backend stdout]:', data.toString());
+      });
+      
+      backendProcess.stderr.on('data', (data) => {
+        console.error('[Backend stderr]:', data.toString());
       });
     }
 
     backendProcess.on('error', (err) => {
-      console.error('Failed to start backend:', err);
+      console.error('[Backend] Failed to start:', err);
       // Show error dialog to user
       require('electron').dialog.showErrorBox(
         'Backend Error',
-        'Failed to start the backend server. Please ensure Python is installed and try again.'
+        'Failed to start the backend server.\n\nError: ' + (err.message || err)
       );
       try {
         if (splashWindow) splashWindow.webContents.send('backend-error', String(err?.message || err));
@@ -333,26 +416,26 @@ async function startBackend(force = false) {
 
     // Give backend time to start
     setTimeout(() => {
-      console.log('Backend should be running on http://127.0.0.1:8000');
+      console.log('[Backend] Should be ready on http://127.0.0.1:8000');
     }, 2000);
   } else {
+    const backendPath = path.join(__dirname, '../../backend');
     if (force) {
-      // Start uvicorn in development when forcing prod build testing
-      const backendPath = path.join(__dirname, '../../backend');
-      console.log('Dev mode forced backend start from:', backendPath);
-      const dataDir = app.getPath('userData') ? require('path').join(app.getPath('userData'), 'ims-data') : undefined;
+      console.log('[Backend] Dev mode: starting from:', backendPath);
+      const dataDir = app.getPath('userData') ? path.join(app.getPath('userData'), 'ims-data') : undefined;
       const env = Object.assign({}, process.env, dataDir ? { IMS_DATA_DIR: dataDir } : {});
-      backendProcess = spawn('python', ['-m', 'uvicorn', 'main:app', '--host', '127.0.0.1', '--port', '8000'], {
+      const py = resolvePythonCmd(backendPath);
+      backendProcess = spawn(py, ['-m', 'uvicorn', 'main:app', '--host', '127.0.0.1', '--port', '8000'], {
         cwd: backendPath,
         stdio: 'inherit',
         windowsHide: true,
         env
       });
       backendProcess.on('error', (err) => {
-        console.error('Failed to start backend (forced):', err);
+        console.error('[Backend] Failed to start (dev):', err);
       });
     } else {
-      console.log('Development mode - backend should be started manually');
+      console.log('[Backend] Development mode - backend should be started manually');
     }
   }
 }
@@ -365,8 +448,19 @@ function stopBackend() {
 }
 
 // App event handlers
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   createSplashWindow();
+  // Proactively start backend and wait a bit longer for readiness
+  try {
+    await startBackend(true);
+    await waitForPort(8000, '127.0.0.1', 10000).catch(() => {});
+  } catch (e) {
+    console.error('Error during backend auto-start:', e);
+  }
+  // Auto-open main window if not already created by splash interaction
+  setTimeout(() => {
+    try { createWindow(); } catch (e) { console.error('Failed to create main window:', e); }
+  }, 500);
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

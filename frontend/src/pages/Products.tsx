@@ -73,7 +73,7 @@ const Products: React.FC = () => {
   const queryClient = useQueryClient();
 
   // Fetch products
-  const { data: products = [], isLoading } = useQuery({
+  const { data: products = [] } = useQuery({
     queryKey: ['products', searchTerm, selectedCategory],
     queryFn: async () => {
       const params: any = {};
@@ -123,9 +123,26 @@ const Products: React.FC = () => {
 
   // Delete product mutation
   const deleteProductMutation = useMutation({
-    mutationFn: (id: number) => productApi.delete(id),
-    onSuccess: () => {
+    mutationFn: async (id: number) => {
+      console.log('[Products] Deleting product:', id);
+      try {
+        const response = await productApi.delete(id);
+        console.log('[Products] Delete response:', response.data);
+        return response.data;
+      } catch (err: any) {
+        console.error('[Products] Delete failed:', err);
+        console.error('[Products] Error details:', err.response?.data || err.message);
+        throw err;
+      }
+    },
+    onSuccess: (data, id) => {
+      console.log('[Products] Delete successful, invalidating queries');
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      alert('Product deactivated successfully');
+    },
+    onError: (error: any, id) => {
+      console.error('[Products] Delete mutation error:', error);
+      alert(`Failed to delete product: ${error.response?.data?.detail || error.message || 'Unknown error'}`);
     },
   });
 

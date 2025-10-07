@@ -1,4 +1,4 @@
-import * as React from "react"
+// no React import needed
 
 interface ToastProps {
   title: string

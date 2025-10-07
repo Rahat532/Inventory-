@@ -189,7 +189,7 @@ def update_return_status(
     
     return_order.status = status
     
-    # If approving return, update stock quantities
+    # If approving return, update stock quantities (do not mark processed yet)
     if status == "approved":
         for item in return_order.return_items:
             product = db.query(Product).filter(Product.id == item.product_id).first()
@@ -197,7 +197,9 @@ def update_return_status(
                 # Add returned items back to stock if condition is good
                 if item.condition == "good":
                     product.stock_quantity += item.quantity
-        
+
+    # When refund is paid out, mark as processed (used for revenue subtraction)
+    if status == "refunded":
         return_order.processed_at = datetime.now()
     
     db.commit()

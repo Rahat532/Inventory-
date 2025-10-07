@@ -108,6 +108,10 @@ const Returns: React.FC = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['returns'] });
+      // Ensure Dashboard KPIs/charts reflect the new return immediately
+      queryClient.invalidateQueries({
+        predicate: (q) => Array.isArray(q.queryKey) && (q.queryKey as any[])[0] === 'dashboard',
+      });
       setIsCreateDialogOpen(false);
       resetForm();
       toast({
@@ -132,6 +136,10 @@ const Returns: React.FC = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['returns'] });
+      // Returns can affect revenue, charts, and low stock; refresh Dashboard queries
+      queryClient.invalidateQueries({
+        predicate: (q) => Array.isArray(q.queryKey) && (q.queryKey as any[])[0] === 'dashboard',
+      });
       toast({
         title: "Success",
         description: "Return status updated successfully",

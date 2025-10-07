@@ -9,6 +9,7 @@ import Sales from './pages/Sales';
 import Reports from './pages/Reports';
 import Returns from './pages/Returns';
 import Settings from './pages/Settings';
+import { ThemeProvider } from './lib/theme';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -26,21 +27,23 @@ function App() {
   const RouterComponent: React.ComponentType<any> = isFile ? HashRouter : BrowserRouter;
   return (
     <QueryClientProvider client={queryClient}>
-      <RouterComponent>
-        <div className="h-screen bg-background">
-          <Layout>
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/products" element={<Products />} />
-              <Route path="/categories" element={<Categories />} />
-              <Route path="/sales" element={<Sales />} />
-              <Route path="/reports" element={<Reports />} />
-              <Route path="/returns" element={<Returns />} />
-              <Route path="/settings" element={<Settings />} />
-            </Routes>
-          </Layout>
-        </div>
-      </RouterComponent>
+      <ThemeProvider>
+        <RouterComponent>
+          <div className="h-screen bg-background">
+            <Layout>
+              <Routes>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/products" element={<Products />} />
+                <Route path="/categories" element={<Categories />} />
+                <Route path="/sales" element={<Sales />} />
+                <Route path="/reports" element={<Reports />} />
+                <Route path="/returns" element={<Returns />} />
+                <Route path="/settings" element={<Settings />} />
+              </Routes>
+            </Layout>
+          </div>
+        </RouterComponent>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }
