@@ -3,6 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import uvicorn
 from contextlib import asynccontextmanager
+import os
+import sys
 
 from app.database import create_tables
 from app.paths import get_data_dir
@@ -58,10 +60,13 @@ async def health_check():
 
 
 if __name__ == "__main__":
+    # In the PyInstaller-packed executable path, avoid using reload.
+    # Use UVICORN_RELOAD=1 to enable reload explicitly when running the file directly.
+    reload_flag = os.getenv("UVICORN_RELOAD") == "1" and not getattr(sys, "frozen", False)
     uvicorn.run(
         "main:app",
         host="127.0.0.1",
         port=8000,
-        reload=True,
+        reload=reload_flag,
         log_level="info"
     )
