@@ -71,6 +71,8 @@ const Settings: React.FC = () => {
       company_address: d.company_address || '',
       company_phone: d.company_phone || '',
       company_email: d.company_email || '',
+      company_tax_id: d.company_tax_id || '',
+      invoice_footer_notes: d.invoice_footer_notes || '',
       currency: d.currency || 'USD',
       currency_symbol: d.currency_symbol || currencySymbolMap[d.currency || 'USD'] || '$',
       tax_rate: d.tax_rate ? parseFloat(d.tax_rate) : 0,
@@ -147,6 +149,8 @@ const Settings: React.FC = () => {
       data.company_address = (formData.get('company_address') as string) || '';
       data.company_phone = (formData.get('company_phone') as string) || '';
       data.company_email = (formData.get('company_email') as string) || '';
+      data.company_tax_id = (formData.get('company_tax_id') as string) || '';
+      data.invoice_footer_notes = (formData.get('invoice_footer_notes') as string) || '';
       data.currency = currency;
       // keep currency_symbol in sync
       data.currency_symbol = currencySymbolMap[currency] || '$';
@@ -276,6 +280,16 @@ const Settings: React.FC = () => {
                   </div>
 
                   <div>
+                    <Label htmlFor="company_tax_id">Tax ID (e.g., VAT/GST/TIN)</Label>
+                    <Input
+                      id="company_tax_id"
+                      name="company_tax_id"
+                      defaultValue={settings?.company_tax_id || ''}
+                      placeholder="Enter your tax identifier"
+                    />
+                  </div>
+
+                  <div>
                     <Label htmlFor="currency">Currency</Label>
                     <Select name="currency" defaultValue={settings?.currency || 'USD'}>
                       <SelectTrigger>
@@ -290,6 +304,20 @@ const Settings: React.FC = () => {
                         <SelectItem value="INR">INR - Indian Rupee</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="invoice_footer_notes">Invoice Footer Notes</Label>
+                    <Textarea
+                      id="invoice_footer_notes"
+                      name="invoice_footer_notes"
+                      defaultValue={settings?.invoice_footer_notes || ''}
+                      placeholder="Thank you for your business! Returns accepted within 30 days with receipt."
+                      rows={3}
+                    />
+                    <p className="text-sm text-muted-foreground mt-1">
+                      This text appears at the bottom of printed invoices.
+                    </p>
                   </div>
 
                   <Button type="submit" disabled={updateSettingsMutation.isPending}>

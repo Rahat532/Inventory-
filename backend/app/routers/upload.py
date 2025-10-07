@@ -74,6 +74,41 @@ async def upload_product_image(
     }
 
 
+@router.post("/product-image")
+async def upload_product_image_temp(
+    file: UploadFile = File(...),
+):
+    """Upload a product image without binding to a product.
+
+    This supports the frontend flow that uploads an image before creating the product.
+    Returns an image_url that can be saved on product creation.
+    """
+    # Validate file type
+    if get_file_extension(file.filename) not in ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid file type. Allowed: jpg, jpeg, png, gif, webp"
+        )
+
+    # Validate file size
+    contents = await file.read()
+    if len(contents) > MAX_FILE_SIZE:
+        raise HTTPException(status_code=400, detail="File size too large (max 5MB)")
+
+    # Generate unique filename and save
+    filename = generate_unique_filename(file.filename)
+    file_path = os.path.join(UPLOAD_DIR, filename)
+    with open(file_path, "wb") as buffer:
+        buffer.write(contents)
+
+    image_url = f"/uploads/{filename}"
+    return {
+        "message": "Image uploaded successfully",
+        "image_url": image_url,
+        "filename": filename
+    }
+
+
 @router.post("/product-images/{product_id}")
 async def upload_multiple_product_images(
     product_id: int,

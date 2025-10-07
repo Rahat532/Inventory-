@@ -5,6 +5,8 @@ import shutil
 import os
 from datetime import datetime
 from app.database import get_db, DATABASE_URL
+from app.paths import get_data_dir
+import sqlite3
 from app.models import Settings as SettingsModel
 from app.schemas import Settings as SettingsSchema, SettingsCreate, SettingsUpdate
 
@@ -20,10 +22,12 @@ DEFAULT_SETTINGS = {
     "company_address": "",
     "company_phone": "",
     "company_email": "",
+    "company_tax_id": "",  # e.g., VAT/GST/TIN
     "tax_rate": "0.0",
     "low_stock_threshold": "10",
     "backup_frequency": "weekly",
-    "auto_backup": "true"
+    "auto_backup": "true",
+    "invoice_footer_notes": ""
 }
 
 
@@ -161,23 +165,29 @@ def delete_setting(key: str, db: Session = Depends(get_db)):
 
 @router.post("/backup")
 def create_backup(db: Session = Depends(get_db)):
-    """Create a backup of the database"""
+    """Create a backup of the database using SQLite backup API"""
     try:
         # Get database file path
         db_path = DATABASE_URL.replace("sqlite:///", "")
-        
-        # Create backup directory if it doesn't exist
-        backup_dir = os.path.join(os.path.dirname(db_path), "backups")
+
+        # Backups under the data dir for portability
+        backup_dir = get_data_dir('database')
+        backup_dir = os.path.join(backup_dir, 'backups')
         os.makedirs(backup_dir, exist_ok=True)
-        
+
         # Create backup filename with timestamp
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         backup_filename = f"inventory_backup_{timestamp}.db"
         backup_path = os.path.join(backup_dir, backup_filename)
-        
-        # Copy database file
-        shutil.copy2(db_path, backup_path)
-        
+
+        # Use sqlite backup to avoid copying a locked file
+        src = sqlite3.connect(db_path)
+        dst = sqlite3.connect(backup_path)
+        with dst:
+            src.backup(dst)
+        src.close()
+        dst.close()
+
         return {
             "message": "Backup created successfully",
             "backup_file": backup_filename,
@@ -192,30 +202,29 @@ def create_backup(db: Session = Depends(get_db)):
 def list_backups():
     """List all available backups"""
     try:
-        # Get backup directory
-        db_path = DATABASE_URL.replace("sqlite:///", "")
-        backup_dir = os.path.join(os.path.dirname(db_path), "backups")
-        
+        # Get backup directory (data dir)
+        backup_dir = os.path.join(get_data_dir('database'), "backups")
+
         if not os.path.exists(backup_dir):
             return {"backups": []}
-        
+
         # List all backup files
         backups = []
         for filename in os.listdir(backup_dir):
             if filename.endswith(".db") and filename.startswith("inventory_backup_"):
                 file_path = os.path.join(backup_dir, filename)
                 file_stat = os.stat(file_path)
-                
+
                 backups.append({
                     "filename": filename,
                     "size": file_stat.st_size,
                     "created_at": datetime.fromtimestamp(file_stat.st_ctime).isoformat(),
                     "modified_at": datetime.fromtimestamp(file_stat.st_mtime).isoformat()
                 })
-        
+
         # Sort by creation time (newest first)
         backups.sort(key=lambda x: x["created_at"], reverse=True)
-        
+
         return {"backups": backups}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to list backups: {str(e)}")
@@ -227,7 +236,7 @@ def restore_backup(backup_filename: str, db: Session = Depends(get_db)):
     try:
         # Get paths
         db_path = DATABASE_URL.replace("sqlite:///", "")
-        backup_dir = os.path.join(os.path.dirname(db_path), "backups")
+        backup_dir = os.path.join(get_data_dir('database'), "backups")
         backup_path = os.path.join(backup_dir, backup_filename)
         
         # Check if backup file exists

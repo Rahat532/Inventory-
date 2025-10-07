@@ -1,6 +1,7 @@
 const { app, BrowserWindow, Menu, ipcMain } = require('electron');
 const path = require('path');
-const isDev = require('electron-is-dev');
+// Use Electron's built-in flag instead of electron-is-dev so prod builds don't require that package
+const isDev = !app.isPackaged;
 const { spawn } = require('child_process');
 const net = require('net');
 
@@ -134,8 +135,8 @@ function createSplashWindow() {
   // When splash requests start, spin up backend then open main window
   ipcMain.once('splash-start', async () => {
     try {
-      startBackend(true);
-      // Wait briefly for backend port to accept connections (best-effort)
+      // Start backend (skips if already running) and wait briefly for readiness
+      await startBackend(true);
       await waitForPort(8000, '127.0.0.1', 6000).catch(() => {});
     } catch (e) {
       console.error('Error starting backend from splash:', e);
@@ -273,7 +274,22 @@ function createMenu() {
   Menu.setApplicationMenu(menu);
 }
 
-function startBackend(force = false) {
+async function isPortOpen(port, host = '127.0.0.1', timeoutMs = 400) {
+  try {
+    await waitForPort(port, host, timeoutMs);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function startBackend(force = false) {
+  // If something is already listening on 8000, don't start another backend
+  const alreadyRunning = await isPortOpen(8000, '127.0.0.1', 350);
+  if (alreadyRunning) {
+    console.log('Backend already running on http://127.0.0.1:8000, skipping spawn.');
+    return;
+  }
   if (!isDev) {
     // In production, start the bundled Python backend
     const exeName = process.platform === 'win32' ? 'ims-backend.exe' : 'ims-backend';

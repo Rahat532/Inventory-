@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Prefer env override, fallback to localhost; use 127.0.0.1 to avoid IPv6 issues in packaged apps
-const API_BASE_URL =
+export const API_BASE_URL =
   (process.env.REACT_APP_API_BASE_URL as string) || 'http://127.0.0.1:8000/api';
 
 const api = axios.create({
@@ -53,6 +53,7 @@ export const salesApi = {
   getTodaySummary: () => api.get('/sales/today/summary'),
   getMonthlySummary: (year?: number, month?: number) => 
     api.get('/sales/monthly/summary', { params: { year, month } }),
+  downloadInvoice: (id: number) => api.get(`/sales/${id}/invoice`, { responseType: 'blob' }),
 };
 
 // Dashboard API
@@ -121,4 +122,5 @@ export const returnsApi = {
   updateReturnStatus: (id: number, status: string) =>
     api.put(`/returns/${id}/status`, undefined, { params: { status } }),
   deleteReturn: (id: number) => api.delete(`/returns/${id}`),
+  downloadInvoice: (id: number) => api.get(`/returns/${id}/invoice`, { responseType: 'blob' }),
 };

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { productApi, categoryApi, uploadApi } from '../services/api';
+import { productApi, categoryApi, uploadApi, API_BASE_URL } from '../services/api';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -426,7 +426,7 @@ const Products: React.FC = () => {
                       <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
                         {product.image_url ? (
                           <img 
-                            src={`http://localhost:8000${product.image_url}`} 
+                            src={`${API_BASE_URL.replace('/api','')}${product.image_url}`} 
                             alt={product.name}
                             className="w-full h-full object-cover"
                           />

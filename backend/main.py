@@ -2,10 +2,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import uvicorn
-import os
 from contextlib import asynccontextmanager
 
-from app.database import engine, create_tables
+from app.database import create_tables
+from app.paths import get_data_dir
 from app.routers import products, categories, sales, dashboard, reports, settings, returns, upload
 
 
@@ -43,8 +43,8 @@ app.include_router(settings.router, prefix="/api/settings", tags=["settings"])
 app.include_router(returns.router, prefix="/api", tags=["returns"])
 app.include_router(upload.router, prefix="/api", tags=["upload"])
 
-# Serve uploaded files
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+# Serve uploaded files from the data directory (works in packaged app)
+app.mount("/uploads", StaticFiles(directory=get_data_dir('uploads')), name="uploads")
 
 
 @app.get("/")

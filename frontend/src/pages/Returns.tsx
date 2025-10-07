@@ -16,7 +16,8 @@ import {
   Search, 
   DollarSign,
   Package,
-  AlertCircle
+  AlertCircle,
+  Printer
 } from 'lucide-react';
 
 interface ReturnItemDto {
@@ -580,6 +581,27 @@ const Returns: React.FC = () => {
                               Process Refund
                             </Button>
                           )}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={async () => {
+                              try {
+                                const res = await returnsApi.downloadInvoice(returnItem.id);
+                                const url = window.URL.createObjectURL(res.data);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = `return_${returnItem.return_number}.pdf`;
+                                a.click();
+                                window.URL.revokeObjectURL(url);
+                              } catch (e) {
+                                console.error('Failed to download return invoice', e);
+                                alert('Failed to download return invoice');
+                              }
+                            }}
+                            title="Print Return"
+                          >
+                            <Printer className="h-4 w-4" />
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>

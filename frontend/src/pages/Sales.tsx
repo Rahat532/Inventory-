@@ -28,7 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from '../components/ui/table';
-import { Plus, ShoppingCart, Minus, Trash2, Receipt, Search, Calendar } from 'lucide-react';
+import { Plus, ShoppingCart, Minus, Trash2, Receipt, Search, Calendar, Printer } from 'lucide-react';
 
 interface Product {
   id: number;
@@ -212,6 +212,25 @@ const Sales: React.FC = () => {
       hour: '2-digit',
       minute: '2-digit'
     });
+  };
+
+  const downloadBlob = (blob: Blob, filename: string) => {
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const printInvoice = async (saleId: number, saleNumber: string) => {
+    try {
+      const res = await salesApi.downloadInvoice(saleId);
+      downloadBlob(res.data, `invoice_${saleNumber}.pdf`);
+    } catch (e) {
+      console.error('Failed to download invoice', e);
+      alert('Failed to download invoice');
+    }
   };
 
   if (isLoading) {
@@ -499,6 +518,15 @@ const Sales: React.FC = () => {
                         >
                           <Receipt className="h-4 w-4" />
                         </Button>
+                        <Button
+                          className="ml-2"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => printInvoice(sale.id, sale.sale_number)}
+                          title="Print Invoice"
+                        >
+                          <Printer className="h-4 w-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))
@@ -581,6 +609,14 @@ const Sales: React.FC = () => {
                 <Button onClick={() => setIsSaleDetailsDialogOpen(false)}>
                   Close
                 </Button>
+                {selectedSale && (
+                  <Button
+                    variant="outline"
+                    onClick={() => printInvoice(selectedSale.id, selectedSale.sale_number)}
+                  >
+                    <Printer className="h-4 w-4 mr-2" /> Download Invoice
+                  </Button>
+                )}
               </DialogFooter>
             </div>
           )}
